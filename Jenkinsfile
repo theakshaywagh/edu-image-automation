@@ -1,38 +1,33 @@
-node {
-    def app
-
-    stage('Clone repository') {
-        /* Let's make sure we have the repository cloned to our workspace */
-
-        checkout scm
+pipeline {
+    agent any
+    tools{
+        maven 'maven_3_8_6'
     }
-
-    stage('Build image') {
-        /* This builds the actual image; synonymous to
-         * docker build on the command line */
-
-        app = docker.build("theakshaywagh/edu-image-automation")
-    }
-
-    stage('Test image') {
-        /* Ideally, we would run a test framework against our image.
-         * For this example, we're using a Volkswagen-type approach ;-) */
-
-        app.inside {
-            sh 'echo "Tests passed"'
+    stages{
+        stage('Build Maven'){
+            steps{
+                checkout([$class: 'GitSCM', branches: [[name: '*/master']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/theakshaywagh/edu-image-automation.git']]])
+                sh 'mvn clean install'
+            }
         }
-    }
+        stage('Build docker image'){
+            steps{
+                script{
+                    sh 'docker build -t theakshaywagh/edu-image-automation .'
+                }
+            }
+        }
+        stage('Push image to Dockerhub'){
+            steps{
+                script{
+                   withCredentials([string(credentialsId: 'dockerhub-pwd', variable: 'dockerhubpwd')]) {
+                   sh 'docker login -u theakshaywagh -p ${dockerhubpwd}'
 
-    stage('Push image') {
-        /* Finally, we'll push the image with two tags:
-         * First, the incremental build number from Jenkins
-         * Second, the 'latest' tag.
-         * Pushing multiple tags is cheap, as all the layers are reused. 
-         *docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials'*/
-           sh 'sudo docker login -u "theakshaywagh" -p "deadp@@l123" docker.io'
-               
-            app.push("${env.BUILD_NUMBER}")
-            app.push("latest")
+}
+                   sh 'docker push theakshaywagh/edu-image-automation'
+                }
+            }
+        }
         
     }
 }
