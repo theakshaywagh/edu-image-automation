@@ -7,7 +7,7 @@ pipeline {
         stage('Build Maven'){
             steps{
                 checkout([$class: 'GitSCM', branches: [[name: '*/master']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/theakshaywagh/edu-image-automation.git']]])
-                sh 'mvn clean install'
+             
             }
         }
         stage('Build docker image'){
